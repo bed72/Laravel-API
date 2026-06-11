@@ -1,58 +1,214 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Trocado — API
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+API JSON de **finanças pessoais para casais** (em construção). Cada usuário é dono do
+próprio orçamento e despesas; dois usuários podem se *parear* num casal e ganhar uma
+visão compartilhada somente-leitura, sem co-propriedade de dado nenhum.
 
-## About Laravel
+> O domínio completo (regras, endpoints, invariantes) vive numa **spec stack-agnóstica**
+> separada — ela é a fonte da verdade. Este README cobre como o projeto está organizado e
+> como trabalhar nele.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+### Estado atual
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+Esqueleto + a feature `Expenses` como referência viva da arquitetura. Hoje só o
+`POST /api/expenses` é funcional (as rotas `index`/`show` ainda são stubs). Auth ainda
+não está conectada — o `user_id` está fixo em `1` no controller, de propósito, até o JWT entrar.
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+---
 
-## Learning Laravel
+## Stack
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+- **PHP 8.3+**, **Laravel 13**
+- **Laravel Sail** (Docker) em dev: app + **Postgres 17** + **Valkey 8** (fork RESP-compatível do
+  Redis). Postgres é necessário para a constraint de *overlap* de orçamento (`EXCLUDE USING gist`).
+- **Horizon** sobre Valkey gerencia as filas (driver `redis`).
+- **Pest** (testes), **Pint** (formatação), **Larastan** (análise estática)
+- `laravel/sanctum` (auth — em transição para JWT), `laravel/pulse` (observabilidade)
+- Os testes rodam em **SQLite `:memory:`** (rápido; ver seção Testes).
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+---
 
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
+## Setup
 
-## Agentic Development
-
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+Precisa de **PHP/Composer + Docker** no host. Um comando faz o bootstrap inteiro:
 
 ```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
+composer setup     # install + .env + sobe containers + migra/seeda + Horizon + assets
+composer dev       # Horizon + logs + Vite (o app já é servido pelo Sail)
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+O que o `composer setup` encapsula, em ordem (via Sail):
 
-## Contributing
+1. `composer install` — instala as deps (cria o `vendor/bin/sail`)
+2. copia `.env.example` → `.env`
+3. `sail up -d` — sobe app + Postgres + Valkey
+4. `sail artisan key:generate`
+5. `sail artisan migrate --seed` — schema no Postgres + dados de seed
+6. `sail composer require laravel/horizon` + `sail artisan horizon:install`
+7. `sail npm install` + `sail npm run build`
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+> `sail` é só `docker compose` por baixo — sobe exatamente os serviços do `docker-compose.yml`.
+> Depois do primeiro `up`, use `sail <comando>` (ex.: `sail artisan ...`, `sail composer ...`).
+> Se o `migrate` falhar na 1ª vez (Postgres ainda subindo), rode `composer setup` de novo.
 
-## Code of Conduct
+---
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+## Arquitetura
 
-## Security Vulnerabilities
+**Vertical slice / feature-based.** Em vez do layout plano do Laravel, o código é
+organizado por feature em `app/Features/<Feature>/`, cada uma em três camadas:
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+```
+app/Features/<Feature>/
+  Http/             Controllers (finos), Requests, Responses (JsonResource), Routes
+  Domain/           Models, Services (regras + escrita), Contracts (interfaces)
+  Infrastructure/   Repositories (Eloquent), Providers (ServiceProvider da feature)
+```
 
-## License
+> O `User` mora em `app/Features/Users/Domain/Models/User.php` — **não** em `app/Models/`.
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+### Fluxo de uma requisição
+
+`Rota → Controller → Service → Repository → Model`
+
+- **Controller** é fino: injeta um Service e devolve um `Resource`.
+- **Service** orquestra regra de negócio, escrita e efeitos colaterais.
+- **Repository** isola o acesso a dados atrás de um contrato (`...RepositoryInterface`) —
+  decisão deliberada por desacoplamento e controle explícito sobre o Eloquent.
+
+### Cada feature se registra sozinha
+
+Toda feature tem o próprio `ServiceProvider` (registrado em `bootstrap/providers.php`),
+que estende um `FeatureServiceProvider` base e faz duas coisas:
+
+```php
+class ExpenseServiceProvider extends FeatureServiceProvider
+{
+    // Bind de contrato → implementação (lido nativamente pelo Laravel).
+    public array $bindings = [
+        ExpenseRepositoryInterface::class => ExpenseRepository::class,
+    ];
+
+    public function boot(): void
+    {
+        // api middleware + prefixo /api, com caminho relativo (à prova de refactor).
+        $this->loadFeatureRoutes(__DIR__.'/../../Http/Routes/Routes.php');
+    }
+}
+```
+
+As rotas são **descentralizadas**: cada feature declara as suas em `Http/Routes/Routes.php`.
+O `routes/api.php` raiz guarda só o essencial. O `FeatureServiceProvider::loadFeatureRoutes()`
+aceita `middleware`/`prefix` como parâmetro (default `api`/`api`), para que o admin e as
+páginas web de conta possam usar outra camada sem furar o padrão.
+
+### Convenções
+
+- Models declaram campos via **atributos** (Laravel 13), não propriedades:
+  `#[Fillable([...])]` e `#[Hidden([...])]`. Casts ficam no método `casts()`.
+- Erros de API saem como JSON para qualquer rota `api/*` (config em `bootstrap/app.php`).
+- **Fiação de factory:** como os models saíram de `app/Models`, a convenção padrão do
+  Laravel não resolve a factory sozinha. Cada model aponta a sua explicitamente:
+
+  ```php
+  protected static function newFactory(): ExpenseFactory
+  {
+      return ExpenseFactory::new();
+  }
+  ```
+
+### Adicionar uma feature
+
+1. Crie `app/Features/<Nome>/{Http,Domain,Infrastructure}/...`.
+2. Defina a interface do repositório em `Domain/Contracts` e a impl em `Infrastructure/Repositories`.
+3. Crie um `<Nome>ServiceProvider` (estendendo `FeatureServiceProvider`) com o mapa
+   `$bindings` e o `loadFeatureRoutes(...)`, e registre-o em `bootstrap/providers.php`.
+
+---
+
+## Banco de dados
+
+- **Migrations** em `database/migrations/`.
+- **Factories** em `database/factories/` (cada uma com `$model` explícito).
+- **Seeders** por feature, orquestrados pelo `DatabaseSeeder` na ordem das FKs:
+
+```bash
+sail artisan db:seed                          # roda o DatabaseSeeder (User → Expense)
+sail artisan db:seed --class=ExpenseSeeder    # uma feature só
+sail artisan migrate:fresh --seed             # recria o schema e popula do zero
+```
+
+O `UserSeeder` cria um usuário fixo `test@example.com` para login manual em dev.
+
+---
+
+## Testes (Pest)
+
+```bash
+composer test                       # suíte completa (php artisan test detecta o Pest)
+./vendor/bin/pest                    # idem, direto
+./vendor/bin/pest --filter Expense   # um arquivo/grupo
+```
+
+- **`tests/Feature/`** — testes HTTP. Sobem o Laravel e usam `RefreshDatabase` (ligados
+  via `tests/Pest.php`). Testam comportamento ponta-a-ponta — são a espinha dorsal.
+- **`tests/Unit/`** — testes puros, **sem** boot do Laravel (rápidos). É onde o
+  desacoplamento se paga: a Service é testada trocando o repositório por um mock (Mockery).
+- Casos repetitivos (validação, fórmulas) usam **datasets** (`->with([...])`) em vez de
+  métodos duplicados.
+- Banco de teste: **SQLite em memória** (`phpunit.xml`) — rápido e isolado. Seeders **não** rodam
+  nos testes; cada teste monta o cenário mínimo com factory. Exceção: a constraint de *overlap* de
+  orçamento (§3.4) só existe em Postgres, então *aquele* teste vai precisar rodar contra o `pgsql` do Sail.
+
+**Princípio:** testa-se *lógica*, não *camada porque existe*. Um repositório que só repassa
+pro Eloquent não ganha teste (seria testar o Laravel); ele passa a merecer um teste de
+integração no dia que carregar uma regra (query na mão, scope de soft-delete, agregação).
+
+### Teste de carga (opcional)
+
+`pest-plugin-stressless` simula N usuários simultâneos contra um endpoint de pé (k6 por baixo):
+
+```bash
+composer require pestphp/pest-plugin-stressless --dev
+./vendor/bin/pest stress http://127.0.0.1:8000/budgets/active --concurrency=20 --duration=10
+```
+
+Uso recomendado: **guardião de regressão de performance** (pegar N+1 num selector), não
+termômetro de capacidade absoluta.
+
+---
+
+## Qualidade de código
+
+Duas ferramentas que se complementam — rode as duas:
+
+| Comando | Ferramenta | Faz |
+|---|---|---|
+| `composer lint` | Pint | formata e reescreve (estilo) |
+| `composer lint:test` | Pint | só checa, não escreve (CI / pre-commit) |
+| `composer analyse` | Larastan/PHPStan | acha bug, tipo errado, método inexistente |
+
+```bash
+composer require --dev larastan/larastan    # instala o analisador (Pint já vem)
+```
+
+- **`pint.json`** — preset `laravel` com regras explícitas (imports ordenados, sem import
+  morto, vírgula final em multiline).
+- **`phpstan.neon`** — nível **6** sobre `app`/`database`/`routes`. Suba até `max` conforme
+  for limpando. `tests/` fica de fora por ora (closures do Pest geram falso-positivo).
+
+> Pint nunca pega bug — deixa bonito código errado. Quem morde é o PHPStan.
+
+---
+
+## Comandos úteis
+
+| Comando | O que faz |
+|---|---|
+| `composer dev` | sobe os containers + Horizon + Pail (logs) + Vite num comando só |
+| `sail up -d` / `sail down` | sobe / derruba app + Postgres + Valkey |
+| `sail artisan horizon` | worker de fila + dashboard `/horizon` |
+| `sail composer test` | roda a suíte de testes |
+| `sail composer lint` / `sail composer analyse` | formata / analisa |
+| `sail artisan migrate:fresh --seed` | recria e popula o banco |
+| `sail artisan route:list` | lista as rotas (inclusive as das features) |
