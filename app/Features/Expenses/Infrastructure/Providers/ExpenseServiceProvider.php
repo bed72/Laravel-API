@@ -4,27 +4,16 @@ namespace App\Features\Expenses\Infrastructure\Providers;
 
 use App\Features\Expenses\Domain\Contracts\ExpenseRepositoryInterface;
 use App\Features\Expenses\Infrastructure\Repositories\ExpenseRepository;
-use Illuminate\Support\ServiceProvider;
-use Route;
+use App\Support\Providers\FeatureServiceProvider;
 
-class ExpenseServiceProvider extends ServiceProvider
+class ExpenseServiceProvider extends FeatureServiceProvider
 {
-    public function register(): void
-    {
-        $this->app->bind(
-            ExpenseRepositoryInterface::class,
-            ExpenseRepository::class,
-        );
-    }
+    public array $bindings = [
+        ExpenseRepositoryInterface::class => ExpenseRepository::class,
+    ];
 
     public function boot(): void
     {
-        Route::middleware('api')
-            ->prefix('api')
-            ->group(
-                base_path(
-                    'app/Features/Expenses/Http/Routes/Routes.php'
-                )
-            );
+        $this->loadFeatureRoutes(__DIR__.'/../../Http/Routes/Routes.php');
     }
 }
