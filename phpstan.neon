@@ -1,0 +1,12 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+
+parameters:
+    level: 6
+    paths:
+        - app
+        - database
+        - routes
+    # Comece no 6 e suba até 'max' conforme for limpando os erros.
+    # A feature-based structure passa lisa; o que vai acender são os
+    # buracos reais (user_id fixo, métodos de controller inexistentes).

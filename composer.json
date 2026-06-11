@@ -39,18 +39,31 @@
         "setup": [
             "composer install",
             "@php -r \"file_exists('.env') || copy('.env.example', '.env');\"",
-            "@php artisan key:generate",
-            "@php artisan migrate --force",
-            "npm install --ignore-scripts",
-            "npm run build"
+            "sail up -d",
+            "sail artisan key:generate",
+            "sail artisan migrate --seed",
+            "sail composer require laravel/horizon",
+            "sail artisan horizon:install",
+            "sail npm install",
+            "sail npm run build"
         ],
         "dev": [
             "Composer\\Config::disableProcessTimeout",
-            "npx concurrently -c \"#93c5fd,#c4b5fd,#fb7185,#fdba74\" \"php artisan serve\" \"php artisan queue:listen --tries=1 --timeout=0\" \"php artisan pail --timeout=0\" \"npm run dev\" --names=server,queue,logs,vite --kill-others"
+            "sail up -d",
+            "npx concurrently -c \"#c4b5fd,#fb7185,#fdba74\" \"sail artisan horizon\" \"sail artisan pail --timeout=0\" \"sail npm run dev\" --names=horizon,logs,vite --kill-others"
         ],
         "test": [
             "@php artisan config:clear --ansi @no_additional_args",
             "@php artisan test"
+        ],
+        "lint": [
+            "pint"
+        ],
+        "lint:test": [
+            "pint --test"
+        ],
+        "analyse": [
+            "phpstan analyse"
         ],
         "post-autoload-dump": [
             "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
