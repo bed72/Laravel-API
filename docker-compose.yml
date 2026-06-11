@@ -1,0 +1,70 @@
+# Laravel Sail — ambiente de desenvolvimento.
+# Sobe via `sail up -d`. Os containers se falam por nome de serviço (pgsql, valkey),
+# não por 127.0.0.1 — por isso o .env usa DB_HOST=pgsql e REDIS_HOST=valkey.
+services:
+    laravel.test:
+        build:
+            context: ./vendor/laravel/sail/runtimes/8.3
+            dockerfile: Dockerfile
+            args:
+                WWWGROUP: '${WWWGROUP}'
+        image: sail-8.3/app
+        extra_hosts:
+            - 'host.docker.internal:host-gateway'
+        ports:
+            - '${APP_PORT:-80}:80'
+            - '${VITE_PORT:-5173}:${VITE_PORT:-5173}'
+        environment:
+            WWWUSER: '${WWWUSER}'
+            LARAVEL_SAIL: 1
+            XDEBUG_MODE: '${SAIL_XDEBUG_MODE:-off}'
+            XDEBUG_CONFIG: '${SAIL_XDEBUG_CONFIG:-client_host=host.docker.internal}'
+        volumes:
+            - '.:/var/www/html'
+        networks:
+            - sail
+        depends_on:
+            - pgsql
+            - valkey
+
+    pgsql:
+        image: 'postgres:17'
+        ports:
+            - '${FORWARD_DB_PORT:-5432}:5432'
+        environment:
+            PGPASSWORD: '${DB_PASSWORD:-password}'
+            POSTGRES_DB: '${DB_DATABASE}'
+            POSTGRES_USER: '${DB_USERNAME}'
+            POSTGRES_PASSWORD: '${DB_PASSWORD:-password}'
+        volumes:
+            - 'sail-pgsql:/var/lib/postgresql/data'
+        networks:
+            - sail
+        healthcheck:
+            test: ['CMD', 'pg_isready', '-q', '-d', '${DB_DATABASE}', '-U', '${DB_USERNAME}']
+            retries: 3
+            timeout: 5s
+
+    valkey:
+        image: 'valkey/valkey:8-alpine'
+        ports:
+            - '${FORWARD_REDIS_PORT:-6379}:6379'
+        command: 'valkey-server --appendonly yes'
+        volumes:
+            - 'sail-valkey:/data'
+        networks:
+            - sail
+        healthcheck:
+            test: ['CMD', 'valkey-cli', 'ping']
+            retries: 3
+            timeout: 5s
+
+networks:
+    sail:
+        driver: bridge
+
+volumes:
+    sail-pgsql:
+        driver: local
+    sail-valkey:
+        driver: local
