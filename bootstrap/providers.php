@@ -1,7 +1,7 @@
 <?php
 
+use App\Core\Providers\HorizonServiceProvider;
 use App\Features\Expenses\Infrastructure\Providers\ExpenseServiceProvider;
-use App\Providers\HorizonServiceProvider;
 
 return [
     ExpenseServiceProvider::class,
