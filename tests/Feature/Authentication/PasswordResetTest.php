@@ -13,7 +13,7 @@ it('dispatches reset job when email exists', function () {
         'email' => 'user@example.com',
     ]);
 
-    $response->assertOk();
+    $response->assertNoContent();
 
     Queue::assertPushed(SendResetPasswordJob::class, function ($job) {
         return true;
@@ -27,7 +27,7 @@ it('returns success even when email does not exist (non-enumeration)', function 
         'email' => 'nonexistent@example.com',
     ]);
 
-    $response->assertOk();
+    $response->assertNoContent();
 
     Queue::assertNothingPushed();
 });
@@ -52,7 +52,7 @@ it('resets password with valid token', function () {
         'new_password' => 'new-secure-password',
     ]);
 
-    $response->assertOk();
+    $response->assertNoContent();
 
     // Verify the user can sign in with the new password
     $this->postJson('/api/auth/sign-in', [
@@ -109,7 +109,7 @@ it('invalidates all tokens after password reset', function () {
         'uid' => $user->id,
         'token' => $token,
         'new_password' => 'new-password123',
-    ])->assertOk();
+    ])->assertNoContent();
 
     expect($user->tokens()->count())->toBe(0);
 });

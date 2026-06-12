@@ -2,7 +2,7 @@
 
 namespace App\Features\Authentication\Http\Middleware;
 
-use App\Features\Authentication\Domain\Contracts\AuthenticationRepositoryInterface;
+use App\Features\Authentication\Domain\Services\AuthenticationService;
 use App\Features\Users\Domain\Models\User;
 use Closure;
 use Illuminate\Http\Request;
@@ -12,7 +12,7 @@ use Symfony\Component\HttpFoundation\Response;
 class RotateToken
 {
     public function __construct(
-        private readonly AuthenticationRepositoryInterface $repository,
+        private readonly AuthenticationService $service,
     ) {}
 
     public function handle(Request $request, Closure $next): Response
@@ -30,18 +30,14 @@ class RotateToken
             return $response;
         }
 
-        $sevenDaysAgo = now()->subDays(7);
-
-        if ($token->created_at->isAfter($sevenDaysAgo)) {
-            return $response;
-        }
-
         /** @var User $user */
         $user = $request->user();
 
-        $newToken = $this->repository->rotateToken($token, $user);
+        $newToken = $this->service->rotateTokenIfStale($token, $user);
 
-        $response->headers->set('X-New-Token', $newToken->plainTextToken);
+        if ($newToken !== null) {
+            $response->headers->set('X-New-Token', $newToken->plainTextToken);
+        }
 
         return $response;
     }

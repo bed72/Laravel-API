@@ -2,6 +2,7 @@
 
 use App\Core\Domain\Exceptions\DomainException;
 use App\Features\Authentication\Domain\Contracts\AuthenticationRepositoryInterface;
+use App\Features\Authentication\Domain\Contracts\PasswordResetBrokerInterface;
 use App\Features\Authentication\Domain\Contracts\PasswordResetNotifierInterface;
 use App\Features\Authentication\Domain\Services\AuthenticationService;
 use App\Features\Users\Domain\Models\User;
@@ -17,10 +18,12 @@ afterEach(fn () => Mockery::close());
 function makeService(
     ?AuthenticationRepositoryInterface $repository = null,
     ?PasswordResetNotifierInterface $notifier = null,
+    ?PasswordResetBrokerInterface $broker = null,
 ): AuthenticationService {
     return new AuthenticationService(
         notifier: $notifier ?? Mockery::mock(PasswordResetNotifierInterface::class),
         repository: $repository ?? Mockery::mock(AuthenticationRepositoryInterface::class),
+        broker: $broker ?? Mockery::mock(PasswordResetBrokerInterface::class),
     );
 }
 
@@ -36,10 +39,6 @@ it('signs up a new user and returns user with access token', function () {
 
     $repository = Mockery::mock(AuthenticationRepositoryInterface::class);
     $repository->shouldReceive('findActiveUserByEmail')
-        ->once()
-        ->with('john@example.com')
-        ->andReturnNull();
-    $repository->shouldReceive('findUserIncludingTrashed')
         ->once()
         ->with('john@example.com')
         ->andReturnNull();
@@ -67,19 +66,6 @@ it('throws EmailAlreadyRegistered when email exists as active user', function ()
 
     makeService(repository: $repository)->signUp('Test', 'existing@example.com', 'secret123');
 })->throws(DomainException::class, 'Este e-mail já está registrado.');
-
-it('throws EmailBelongsToDeactivated when email exists as trashed user', function () {
-    $repository = Mockery::mock(AuthenticationRepositoryInterface::class);
-    $repository->shouldReceive('findActiveUserByEmail')
-        ->once()
-        ->andReturnNull();
-    $repository->shouldReceive('findUserIncludingTrashed')
-        ->once()
-        ->with('deactivated@example.com')
-        ->andReturn(new User);
-
-    makeService(repository: $repository)->signUp('Test', 'deactivated@example.com', 'secret123');
-})->throws(DomainException::class, 'Este e-mail pertence a uma conta desativada.');
 
 // ─── signIn ───────────────────────────────────────────────────────────────────
 
@@ -112,10 +98,6 @@ it('signs in with valid credentials and returns access token', function () {
 it('throws InvalidCredentials when user does not exist', function () {
     $repository = Mockery::mock(AuthenticationRepositoryInterface::class);
     $repository->shouldReceive('findActiveUserByEmail')
-        ->once()
-        ->with('nonexistent@example.com')
-        ->andReturnNull();
-    $repository->shouldReceive('findUserIncludingTrashed')
         ->once()
         ->with('nonexistent@example.com')
         ->andReturnNull();
@@ -208,4 +190,44 @@ it('throws ResetTokenInvalid when user id does not exist', function () {
         ->andReturnNull();
 
     makeService(repository: $repository)->resetPassword('999', 'some-token', 'new-password123');
+})->throws(DomainException::class, 'Token de redefinição inválido.');
+
+it('resets password successfully when broker returns true', function () {
+    $user = new User;
+    $user->id = 1;
+    $user->email = 'user@example.com';
+
+    $repository = Mockery::mock(AuthenticationRepositoryInterface::class);
+    $repository->shouldReceive('findUserById')
+        ->once()
+        ->with('1')
+        ->andReturn($user);
+
+    $broker = Mockery::mock(PasswordResetBrokerInterface::class);
+    $broker->shouldReceive('reset')
+        ->once()
+        ->with($user, 'valid-token', 'new-password123')
+        ->andReturnTrue();
+
+    makeService(repository: $repository, broker: $broker)->resetPassword('1', 'valid-token', 'new-password123');
+});
+
+it('throws ResetTokenInvalid when broker returns false', function () {
+    $user = new User;
+    $user->id = 1;
+    $user->email = 'user@example.com';
+
+    $repository = Mockery::mock(AuthenticationRepositoryInterface::class);
+    $repository->shouldReceive('findUserById')
+        ->once()
+        ->with('1')
+        ->andReturn($user);
+
+    $broker = Mockery::mock(PasswordResetBrokerInterface::class);
+    $broker->shouldReceive('reset')
+        ->once()
+        ->with($user, 'invalid-token', 'new-password123')
+        ->andReturnFalse();
+
+    makeService(repository: $repository, broker: $broker)->resetPassword('1', 'invalid-token', 'new-password123');
 })->throws(DomainException::class, 'Token de redefinição inválido.');

@@ -4,18 +4,21 @@ namespace App\Features\Authentication\Domain\Services;
 
 use App\Core\Domain\Exceptions\DomainError;
 use App\Features\Authentication\Domain\Contracts\AuthenticationRepositoryInterface;
+use App\Features\Authentication\Domain\Contracts\PasswordResetBrokerInterface;
 use App\Features\Authentication\Domain\Contracts\PasswordResetNotifierInterface;
 use App\Features\Users\Domain\Models\User;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Password;
 use Laravel\Sanctum\NewAccessToken;
 use Laravel\Sanctum\PersonalAccessToken;
 
 class AuthenticationService
 {
+    private const TOKEN_ROTATION_DAYS = 7;
+
     public function __construct(
         private readonly PasswordResetNotifierInterface $notifier,
         private readonly AuthenticationRepositoryInterface $repository,
+        private readonly PasswordResetBrokerInterface $broker,
     ) {}
 
     /**
@@ -29,12 +32,6 @@ class AuthenticationService
 
         if ($existing !== null) {
             DomainError::EmailAlreadyRegistered->throw();
-        }
-
-        $trashed = $this->repository->findUserIncludingTrashed($email);
-
-        if ($trashed !== null) {
-            DomainError::EmailBelongsToDeactivated->throw();
         }
 
         $user = $this->repository->createUser([
@@ -59,9 +56,6 @@ class AuthenticationService
         $user = $this->repository->findActiveUserByEmail($email);
 
         if ($user === null) {
-            // Check if user exists but is soft-deleted (indistinguishable failure)
-            $this->repository->findUserIncludingTrashed($email);
-
             DomainError::InvalidCredentials->throw();
         }
 
@@ -86,6 +80,21 @@ class AuthenticationService
     public function logOut(User $user): void
     {
         $this->repository->deleteAllTokens($user);
+    }
+
+    /**
+     * Rotaciona o token se ultrapassou a janela de frescura.
+     * Retorna o novo token ou null se rotação não foi necessária.
+     */
+    public function rotateTokenIfStale(PersonalAccessToken $token, User $user): ?NewAccessToken
+    {
+        $staleThreshold = now()->subDays(self::TOKEN_ROTATION_DAYS);
+
+        if ($token->created_at->isAfter($staleThreshold)) {
+            return null;
+        }
+
+        return $this->repository->rotateToken($token, $user);
     }
 
     /**
@@ -114,21 +123,9 @@ class AuthenticationService
             DomainError::ResetTokenInvalid->throw();
         }
 
-        $status = Password::broker()->reset(
-            [
-                'email' => $user->email,
-                'token' => $token,
-                'password' => $newPassword,
-            ],
-            function (User $user) use ($newPassword): void {
-                $user->password = $newPassword;
-                $user->save();
+        $success = $this->broker->reset($user, $token, $newPassword);
 
-                $this->repository->deleteAllTokens($user);
-            },
-        );
-
-        if ($status !== Password::PASSWORD_RESET) {
+        if (! $success) {
             DomainError::ResetTokenInvalid->throw();
         }
     }

@@ -3,9 +3,11 @@
 namespace App\Features\Authentication\Infrastructure\Providers;
 
 use App\Features\Authentication\Domain\Contracts\AuthenticationRepositoryInterface;
+use App\Features\Authentication\Domain\Contracts\PasswordResetBrokerInterface;
 use App\Features\Authentication\Domain\Contracts\PasswordResetNotifierInterface;
 use App\Features\Authentication\Infrastructure\Notifications\PasswordResetNotifier;
 use App\Features\Authentication\Infrastructure\Repositories\AuthenticationRepository;
+use App\Features\Authentication\Infrastructure\Services\PasswordResetBroker;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
@@ -18,6 +20,7 @@ class AuthenticationServiceProvider extends ServiceProvider
     public array $bindings = [
         AuthenticationRepositoryInterface::class => AuthenticationRepository::class,
         PasswordResetNotifierInterface::class => PasswordResetNotifier::class,
+        PasswordResetBrokerInterface::class => PasswordResetBroker::class,
     ];
 
     public function boot(): void

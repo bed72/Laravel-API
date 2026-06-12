@@ -63,7 +63,7 @@ class AuthenticationController
     {
         $this->service->requestPasswordReset($request->validated('email'));
 
-        return response()->json((object) []);
+        return response()->json(null, HttpStatusCode::NoContent->value);
     }
 
     public function resetPassword(PasswordResetConfirmRequest $request): JsonResponse
@@ -74,6 +74,6 @@ class AuthenticationController
             newPassword: $request->validated('new_password'),
         );
 
-        return response()->json((object) []);
+        return response()->json(null, HttpStatusCode::NoContent->value);
     }
 }

@@ -12,12 +12,12 @@ interface AuthenticationRepositoryInterface
 
     public function findActiveUserByEmail(string $email): ?User;
 
-    public function findUserIncludingTrashed(string $email): ?User;
-
     /** @param array<string, mixed> $data */
     public function createUser(array $data): User;
 
     public function createToken(User $user, string $name = 'api'): NewAccessToken;
+
+    public function updatePassword(User $user, string $newPassword): void;
 
     public function deleteAllTokens(User $user): void;
 

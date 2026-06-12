@@ -19,11 +19,6 @@ class AuthenticationRepository implements AuthenticationRepositoryInterface
         return $this->model->newQuery()->where('email', $email)->first();
     }
 
-    public function findUserIncludingTrashed(string $email): ?User
-    {
-        return $this->model->newQuery()->where('email', $email)->first();
-    }
-
     public function findUserById(int|string $id): ?User
     {
         return $this->model->newQuery()->find($id);
@@ -41,6 +36,12 @@ class AuthenticationRepository implements AuthenticationRepositoryInterface
         return $user->createToken($name, expiresAt: now()->addDays(30));
     }
 
+    public function updatePassword(User $user, string $newPassword): void
+    {
+        $user->password = $newPassword;
+        $user->save();
+    }
+
     public function deleteToken(PersonalAccessToken $token): void
     {
         $token->delete();
@@ -56,7 +57,7 @@ class AuthenticationRepository implements AuthenticationRepositoryInterface
         return DB::transaction(function () use ($oldToken, $user): NewAccessToken {
             $oldToken->delete();
 
-            return $user->createToken('api', expiresAt: now()->addDays(30));
+            return $this->createToken($user);
         });
     }
 }
