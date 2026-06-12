@@ -10,8 +10,7 @@ class ExpenseController
 {
     public function __construct(
         private readonly ExpenseService $service,
-    ) {
-    }
+    ) {}
 
     public function store(
         StoreExpenseRequest $request,

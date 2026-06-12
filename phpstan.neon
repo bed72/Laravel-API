@@ -7,6 +7,8 @@ parameters:
         - app
         - database
         - routes
+    excludePaths:
+        - database/migrations/2026_06_11_171027_create_pulse_tables.php
     # Comece no 6 e suba até 'max' conforme for limpando os erros.
     # A feature-based structure passa lisa; o que vai acender são os
     # buracos reais (user_id fixo, métodos de controller inexistentes).

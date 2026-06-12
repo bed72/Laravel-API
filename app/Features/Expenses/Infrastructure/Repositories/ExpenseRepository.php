@@ -12,6 +12,7 @@ class ExpenseRepository implements ExpenseRepositoryInterface
         return Expense::find($id);
     }
 
+    /** @param array<string, mixed> $data */
     public function create(array $data): Expense
     {
         return Expense::create($data);

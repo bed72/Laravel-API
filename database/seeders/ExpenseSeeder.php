@@ -13,7 +13,7 @@ class ExpenseSeeder extends Seeder
         User::all()->each(
             fn (User $user) => Expense::factory()
                 ->count(15)
-                ->create(['user_id' => $user->id])
+                ->create(['user_id' => $user->id]),
         );
     }
 }

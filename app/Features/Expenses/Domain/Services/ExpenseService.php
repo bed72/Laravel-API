@@ -9,9 +9,9 @@ class ExpenseService
 {
     public function __construct(
         private readonly ExpenseRepositoryInterface $repository,
-    ) {
-    }
+    ) {}
 
+    /** @param array<string, mixed> $data */
     public function create(
         int $userId,
         array $data,

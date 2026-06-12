@@ -16,6 +16,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 ])]
 class Expense extends Model
 {
+    /** @use HasFactory<ExpenseFactory> */
     use HasFactory;
 
     protected static function newFactory(): ExpenseFactory
@@ -23,11 +24,13 @@ class Expense extends Model
         return ExpenseFactory::new();
     }
 
+    /** @return BelongsTo<User, $this> */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
+    /** @return array<string, string> */
     protected function casts(): array
     {
         return [

@@ -10,7 +10,7 @@ it('creates an expense with valid data', function () {
         'amount' => 10.50,
         'description' => 'Almoco',
     ])
-        ->assertOk() // 200 hoje; create deveria ser 201
+        ->assertCreated()
         ->assertJsonStructure(['data' => ['id', 'amount', 'description', 'created_at', 'updated_at']])
         ->assertJsonPath('data.amount', '10.50') // cast decimal:2 serializa como string
         ->assertJsonPath('data.description', 'Almoco');
@@ -26,7 +26,7 @@ it('accepts an expense without a description', function () {
     User::factory()->create();
 
     $this->postJson('/api/expenses', ['amount' => 5])
-        ->assertOk()
+        ->assertCreated()
         ->assertJsonPath('data.description', null);
 
     $this->assertDatabaseHas('expenses', ['amount' => 5, 'description' => null]);

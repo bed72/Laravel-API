@@ -15,6 +15,7 @@ use Illuminate\Notifications\Notifiable;
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
+    /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
 
     protected static function newFactory(): UserFactory
@@ -22,12 +23,13 @@ class User extends Authenticatable
         return UserFactory::new();
     }
 
+    /** @return HasMany<Expense, $this> */
     public function expenses(): HasMany
     {
         return $this->hasMany(Expense::class);
     }
 
-
+    /** @return array<string, string> */
     protected function casts(): array
     {
         return [

@@ -2,12 +2,14 @@
 
 namespace App\Features\Expenses\Http\Responses;
 
+use App\Features\Expenses\Domain\Models\Expense;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
+/** @mixin Expense */
 class ExpenseResponse extends JsonResource
 {
-
+    /** @return array<string, mixed> */
     public function toArray(Request $request): array
     {
         return [

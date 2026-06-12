@@ -6,12 +6,12 @@ use App\Features\Expenses\Domain\Models\Expense;
 use App\Features\Users\Domain\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
-
+/** @extends Factory<Expense> */
 class ExpenseFactory extends Factory
 {
     protected $model = Expense::class;
 
-
+    /** @return array<string, mixed> */
     public function definition(): array
     {
         return [
@@ -21,7 +21,6 @@ class ExpenseFactory extends Factory
         ];
     }
 
-   
     public function withoutDescription(): static
     {
         return $this->state(fn (array $attributes) => [

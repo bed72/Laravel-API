@@ -7,7 +7,7 @@ use App\Features\Expenses\Domain\Services\ExpenseService;
 afterEach(fn () => Mockery::close());
 
 it('merges the user id and delegates to the repository', function () {
-    $persisted = new Expense();
+    $persisted = new Expense;
 
     $repository = Mockery::mock(ExpenseRepositoryInterface::class);
     $repository->shouldReceive('create')
