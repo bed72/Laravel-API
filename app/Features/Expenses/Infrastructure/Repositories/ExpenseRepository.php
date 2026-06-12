@@ -7,15 +7,20 @@ use App\Features\Expenses\Domain\Models\Expense;
 
 class ExpenseRepository implements ExpenseRepositoryInterface
 {
+    public function __construct(
+        private readonly Expense $model,
+    ) {}
+
     public function findById(int $id): ?Expense
     {
-        return Expense::find($id);
+        return $this->model->newQuery()->find($id);
     }
 
     /** @param array<string, mixed> $data */
     public function create(array $data): Expense
     {
-        return Expense::create($data);
+        /** @var Expense */
+        return $this->model->newQuery()->create($data);
     }
 
     public function delete(Expense $expense): void

@@ -3,7 +3,6 @@
 use App\Features\Users\Domain\Models\User;
 
 it('creates an expense with valid data', function () {
-    // O controller atribui ao usuário 1 fixo; numa base limpa o 1º user vira id 1.
     User::factory()->create();
 
     $this->postJson('/api/expenses', [
@@ -12,7 +11,7 @@ it('creates an expense with valid data', function () {
     ])
         ->assertCreated()
         ->assertJsonStructure(['data' => ['id', 'amount', 'description', 'created_at', 'updated_at']])
-        ->assertJsonPath('data.amount', '10.50') // cast decimal:2 serializa como string
+        ->assertJsonPath('data.amount', '10.50')
         ->assertJsonPath('data.description', 'Almoco');
 
     $this->assertDatabaseHas('expenses', [
@@ -35,7 +34,7 @@ it('accepts an expense without a description', function () {
 it('rejects an invalid amount', function (mixed $amount) {
     $this->postJson('/api/expenses', ['amount' => $amount])
         ->assertStatus(422)
-        ->assertJsonValidationErrors('amount');
+        ->assertJsonPath('errors.0.field', 'amount');
 })->with([
     'missing' => [null],
     'non-numeric' => ['abc'],
@@ -49,5 +48,5 @@ it('rejects a description longer than 32 chars', function () {
         'description' => str_repeat('a', 33),
     ])
         ->assertStatus(422)
-        ->assertJsonValidationErrors('description');
+        ->assertJsonPath('errors.0.field', 'description');
 });
