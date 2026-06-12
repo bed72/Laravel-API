@@ -1,0 +1,17 @@
+{
+  "enabled": true,
+  "name": "PHPStan on Save",
+  "description": "Runs Larastan/PHPStan level 6 analysis when PHP files are saved",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "app/**/*.php"
+    ]
+  },
+  "then": {
+    "type": "runCommand",
+    "command": "composer analyse",
+    "timeout": 60
+  }
+}

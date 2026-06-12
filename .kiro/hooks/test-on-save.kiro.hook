@@ -1,0 +1,17 @@
+{
+  "enabled": true,
+  "name": "Pest on Test Change",
+  "description": "Runs the Pest test suite when test files are modified",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "tests/**/*.php"
+    ]
+  },
+  "then": {
+    "type": "runCommand",
+    "command": "composer test",
+    "timeout": 120
+  }
+}

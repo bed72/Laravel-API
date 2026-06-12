@@ -1,0 +1,14 @@
+{
+  "enabled": true,
+  "name": "Quality Gate After Task",
+  "description": "Runs the full quality gate (lint + analyse + test) after a spec task is completed",
+  "version": "1",
+  "when": {
+    "type": "postTaskExecution"
+  },
+  "then": {
+    "type": "runCommand",
+    "command": "composer lint:test && composer analyse && composer test",
+    "timeout": 180
+  }
+}

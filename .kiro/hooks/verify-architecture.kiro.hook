@@ -1,0 +1,16 @@
+{
+  "enabled": true,
+  "name": "Verify Feature Architecture",
+  "description": "When a new file is created in app/Features/, reminds the agent to verify it follows vertical slice conventions",
+  "version": "1",
+  "when": {
+    "type": "fileCreated",
+    "patterns": [
+      "app/Features/**/*.php"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "A new feature file was created. Verify it follows the vertical slice architecture: correct namespace, proper directory placement (Domain/Infrastructure/Http), uses PHP attributes for model properties, explicit factory declaration in models, and that the ServiceProvider is registered in bootstrap/providers.php if this is a new feature."
+  }
+}
