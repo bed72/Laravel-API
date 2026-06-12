@@ -4,9 +4,9 @@ namespace App\Features\Authentication\Infrastructure\Jobs;
 
 use App\Features\Authentication\Infrastructure\Notifications\ResetPasswordNotification;
 use App\Features\Users\Domain\Models\User;
+use Illuminate\Auth\Passwords\PasswordBroker;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
-use Illuminate\Support\Facades\Password;
 
 class SendResetPasswordJob implements ShouldQueue
 {
@@ -16,9 +16,9 @@ class SendResetPasswordJob implements ShouldQueue
         private readonly User $user,
     ) {}
 
-    public function handle(): void
+    public function handle(PasswordBroker $broker): void
     {
-        $token = Password::broker()->createToken($this->user);
+        $token = $broker->createToken($this->user);
 
         $this->user->notify(new ResetPasswordNotification($token));
     }

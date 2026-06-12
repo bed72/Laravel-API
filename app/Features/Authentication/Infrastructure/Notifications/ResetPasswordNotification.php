@@ -29,11 +29,8 @@ class ResetPasswordNotification extends Notification
 
         return (new MailMessage)
             ->subject('Redefinição de Senha')
-            ->greeting('Olá!')
-            ->line('Você está recebendo este e-mail porque recebemos uma solicitação de redefinição de senha para a sua conta.')
-            ->action('Redefinir Senha', $resetUrl)
-            ->line('Este link de redefinição de senha expirará em 60 minutos.')
-            ->line('Se você não solicitou uma redefinição de senha, nenhuma ação é necessária.')
-            ->salutation('Atenciosamente, Trocado');
+            ->markdown('mail.auth.reset-password', [
+                'resetUrl' => $resetUrl,
+            ]);
     }
 }
