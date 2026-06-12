@@ -6,8 +6,8 @@ use App\Core\Domain\Enums\HttpStatusCode;
 use App\Features\Authentication\Domain\Services\AuthenticationService;
 use App\Features\Authentication\Http\Requests\PasswordResetConfirmRequest;
 use App\Features\Authentication\Http\Requests\PasswordResetRequest;
-use App\Features\Authentication\Http\Requests\RegisterRequest;
 use App\Features\Authentication\Http\Requests\SignInRequest;
+use App\Features\Authentication\Http\Requests\SignUpRequest;
 use App\Features\Authentication\Http\Responses\SignInResponse;
 use App\Features\Authentication\Http\Responses\SignUpResponse;
 use Illuminate\Http\JsonResponse;
@@ -20,7 +20,7 @@ class AuthenticationController
         private readonly AuthenticationService $service,
     ) {}
 
-    public function signUp(RegisterRequest $request): JsonResponse
+    public function signUp(SignUpRequest $request): JsonResponse
     {
         $result = $this->service->signUp(
             name: $request->validated('name'),
@@ -47,7 +47,7 @@ class AuthenticationController
     {
         /** @var PersonalAccessToken $token */
         $token = $request->user()->currentAccessToken();
-        $this->service->signOut($request->user(), $token);
+        $this->service->signOut($token);
 
         return response()->json(null, HttpStatusCode::NoContent->value);
     }

@@ -8,7 +8,8 @@ fileMatchPattern: "tests/**"
 ## Estrutura
 
 - `tests/Feature/` — Testes HTTP; bootam Laravel + `RefreshDatabase` (wired em `tests/Pest.php`).
-- `tests/Unit/` — Puros, sem boot do Laravel; services testados com repositório mockado (Mockery).
+- `tests/Unit/` — Services testados com repositório mockado (Mockery). Bootam o container (`TestCase`) apenas quando necessitam mockar facades (`Hash`, etc.), mas **sem DB** (sem `RefreshDatabase`).
+- `tests/Stress/` — Testes de carga contra o servidor real (sem `RefreshDatabase`). Rodam separadamente via `composer test:stress`.
 
 ## Regras
 
@@ -18,6 +19,25 @@ fileMatchPattern: "tests/**"
 4. Teste unitário encerra com `afterEach(fn () => Mockery::close())`.
 5. Feature tests: happy path (status + JSON shape + DB assertion) e validation failures.
 6. Collapse same-field invalid cases num único `it(...)->with([...])` dataset.
+7. **Cobertura mínima por feature:** happy path, falhas de validação, falhas de domínio (DomainError), autenticação/autorização, e edge cases relevantes (non-enumeration, idempotência).
+8. **Middleware e comportamento transversal** (rate limiting, token rotation, error envelope) devem ter testes dedicados na feature que os define.
+9. Use assertions descritivas do Pest: `assertCreated()`, `assertUnauthorized()`, `assertNoContent()` — não `assertStatus(201)`.
+
+## Helper de Criação de Service (Unit Tests)
+
+Para testes unitários de services com múltiplas dependências, crie uma `makeService()` helper no topo do arquivo:
+
+```php
+function makeService(
+    ?RepositoryInterface $repository = null,
+    ?NotifierInterface $notifier = null,
+): MyService {
+    return new MyService(
+        repository: $repository ?? Mockery::mock(RepositoryInterface::class),
+        notifier: $notifier ?? Mockery::mock(NotifierInterface::class),
+    );
+}
+```
 
 ## Padrão de Feature Test
 
@@ -31,20 +51,19 @@ it('creates a <resource> with valid data', function () {
 
     $this->postJson('/api/<resources>', [/* valid payload */])
         ->assertCreated()
-        ->assertJsonStructure(['data' => [/* fields */]])
-        ->assertJsonPath('data.<field>', '<value>');
+        ->assertJsonStructure([/* fields */])
+        ->assertJsonPath('<field>', '<value>');
 
     $this->assertDatabaseHas('<table>', [/* expected row */]);
 });
 
-it('rejects invalid <field>', function (mixed $value) {
-    $this->postJson('/api/<resources>', ['<field>' => $value])
-        ->assertStatus(422)
-        ->assertJsonValidationErrors('<field>');
+it('rejects invalid <field>', function (array $payload, string $field) {
+    $this->postJson('/api/<resources>', $payload)
+        ->assertUnprocessable()
+        ->assertJsonPath('errors.0.field', $field);
 })->with([
-    'missing' => [null],
-    'non-numeric' => ['abc'],
-    // ...
+    'missing' => [['other' => 'value'], '<field>'],
+    'invalid format' => [['<field>' => 'bad'], '<field>'],
 ]);
 ```
 
@@ -54,28 +73,28 @@ it('rejects invalid <field>', function (mixed $value) {
 <?php
 
 use App\Features\<Feature>\Domain\Contracts\<Feature>RepositoryInterface;
-use App\Features\<Feature>\Domain\Models\<Feature>;
 use App\Features\<Feature>\Domain\Services\<Feature>Service;
+
+uses(Tests\TestCase::class);
 
 afterEach(fn () => Mockery::close());
 
 it('<descreve o comportamento da service>', function () {
-    $persisted = new <Model>;
-
     $repository = Mockery::mock(<Feature>RepositoryInterface::class);
     $repository->shouldReceive('<method>')
         ->once()
         ->with([/* expected args */])
-        ->andReturn($persisted);
+        ->andReturn($expected);
 
-    $result = (new <Feature>Service($repository))-><method>(/* args */);
+    $result = makeService(repository: $repository)-><method>(/* args */);
 
-    expect($result)->toBe($persisted);
+    expect($result)->toBe($expected);
 });
 ```
 
 ## Comandos
 
-- Rodar todos: `composer test` (ou `sail composer test`)
+- Rodar unit + feature: `composer test` (exclui stress)
+- Rodar stress: `composer test:stress` (contra servidor Sail rodando)
 - Um teste: `sail artisan test --filter <name>`
-- Load test: `./vendor/bin/pest stress <url> --concurrency=N`
+- Load test CLI: `./vendor/bin/pest stress <url> --concurrency=N`

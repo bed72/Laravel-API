@@ -4,7 +4,7 @@ namespace App\Features\Authentication\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class RegisterRequest extends FormRequest
+class SignUpRequest extends FormRequest
 {
     public function authorize(): bool
     {

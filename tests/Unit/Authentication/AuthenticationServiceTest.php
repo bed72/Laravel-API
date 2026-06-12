@@ -143,7 +143,6 @@ it('throws InvalidCredentials when password is wrong', function () {
 // ─── signOut ──────────────────────────────────────────────────────────────────
 
 it('deletes the current token on sign out', function () {
-    $user = new User;
     $token = Mockery::mock(PersonalAccessToken::class);
 
     $repository = Mockery::mock(AuthenticationRepositoryInterface::class);
@@ -151,7 +150,7 @@ it('deletes the current token on sign out', function () {
         ->once()
         ->with($token);
 
-    makeService(repository: $repository)->signOut($user, $token);
+    makeService(repository: $repository)->signOut($token);
 });
 
 // ─── logOut ───────────────────────────────────────────────────────────────────

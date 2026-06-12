@@ -75,7 +75,7 @@ class AuthenticationService
     /**
      * Sign out the current session by deleting the specific token.
      */
-    public function signOut(User $user, PersonalAccessToken $token): void
+    public function signOut(PersonalAccessToken $token): void
     {
         $this->repository->deleteToken($token);
     }
