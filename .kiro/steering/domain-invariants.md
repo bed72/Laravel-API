@@ -15,7 +15,7 @@ Ao trabalhar na camada Domain de qualquer feature, estas regras são inviolávei
 
 ## Persistence
 
-- **Soft-delete em toda entidade**; reads padrão excluem trashed; scope "all-records" existe para auditoria.
+- **Soft-delete nas entidades de domínio**; reads padrão excluem trashed; scope "all-records" existe para auditoria. **`User` é exceção consciente** — sem soft-delete (sem trait, sem `deleted_at`); não criar branches assumindo trashed users.
 - **Budget overlap** é enforcado no DB (Postgres range-exclusion constraint), não só na aplicação.
 - `value > 0`; `end_date` estritamente após `start_date`.
 - **Expense↔Budget é dinâmico por data** — sem FK armazenada; "active budget" = o que cobre `today()`.
@@ -24,6 +24,7 @@ Ao trabalhar na camada Domain de qualquer feature, estas regras são inviolávei
 
 - JWT: access ~15 min, refresh ~30 days com rotation + blacklist.
 - Sanctum default NÃO implementa isso — precisa de camada JWT dedicada.
+- **Fronteira de infra no Domain:** o ciclo de vida do token vive atrás de `TokenIssuerInterface` (impl Sanctum só na Infra) — o Domain **não** importa `Laravel\Sanctum\*`. Recursos **com estado** (token store, `Password::broker()`) são abstraídos atrás de contracts; **utilities stateless** (`Hash`) são aceitas direto no Service. Política de token (TTL 30d, rotação 7d) vive no Service, não na Infra.
 
 ## Estratégias Plugáveis
 

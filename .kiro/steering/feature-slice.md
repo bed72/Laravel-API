@@ -14,15 +14,19 @@ O template de referência é `app/Features/Expenses/`.
 app/Features/<Feature>/
 ├── Domain/
 │   ├── Models/<Feature>.php
+│   ├── Repositories/<Feature>RepositoryInterface.php   # port de repositório
+│   └── Gateways/                                       # ports de gateway (só se a feature falar com mecanismo externo)
+├── Application/
 │   ├── Services/<Feature>Service.php
-│   └── Contracts/<Feature>RepositoryInterface.php
+│   └── Data/                               # DTOs (só se a feature trafegar dados entre camadas)
 ├── Infrastructure/
-│   ├── Repositories/<Feature>Repository.php
-│   └── Providers/<Feature>ServiceProvider.php
-└── Http/
-    ├── Controllers/<Feature>Controller.php
-    ├── Requests/Store<Feature>Request.php
-    ├── Responses/<Feature>Response.php
+│   └── Repositories/<Feature>Repository.php
+├── Presentation/
+│   ├── Controllers/<Feature>Controller.php
+│   ├── Requests/Store<Feature>Request.php
+│   └── Responses/<Feature>Response.php
+└── Main/                                   # composition root da feature
+    ├── Providers/<Feature>ServiceProvider.php
     └── Routes/Routes.php
 ```
 
@@ -68,9 +72,9 @@ class <Feature> extends Model
 ```php
 <?php
 
-namespace App\Features\<Feature>\Infrastructure\Providers;
+namespace App\Features\<Feature>\Main\Providers;
 
-use App\Features\<Feature>\Domain\Contracts\<Feature>RepositoryInterface;
+use App\Features\<Feature>\Domain\Repositories\<Feature>RepositoryInterface;
 use App\Features\<Feature>\Infrastructure\Repositories\<Feature>Repository;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
@@ -87,7 +91,7 @@ class <Feature>ServiceProvider extends ServiceProvider
         $this->app->booted(function (): void {
             Route::middleware('api')
                 ->prefix('api')
-                ->group(__DIR__.'/../../Http/Routes/Routes.php');
+                ->group(__DIR__.'/../Routes/Routes.php');
         });
     }
 }
@@ -100,11 +104,11 @@ Registre o provider em `bootstrap/providers.php`.
 ```php
 <?php
 
-namespace App\Features\<Feature>\Http\Controllers;
+namespace App\Features\<Feature>\Presentation\Controllers;
 
-use App\Features\<Feature>\Domain\Services\<Feature>Service;
-use App\Features\<Feature>\Http\Requests\Store<Feature>Request;
-use App\Features\<Feature>\Http\Responses\<Feature>Response;
+use App\Features\<Feature>\Application\Services\<Feature>Service;
+use App\Features\<Feature>\Presentation\Requests\Store<Feature>Request;
+use App\Features\<Feature>\Presentation\Responses\<Feature>Response;
 
 class <Feature>Controller
 {
