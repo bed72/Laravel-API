@@ -2,7 +2,7 @@
 
 namespace App\Features\Expenses\Infrastructure\Repositories;
 
-use App\Features\Expenses\Domain\Contracts\ExpenseRepositoryInterface;
+use App\Features\Expenses\Domain\Repositories\ExpenseRepositoryInterface;
 use App\Features\Expenses\Domain\Models\Expense;
 
 class ExpenseRepository implements ExpenseRepositoryInterface

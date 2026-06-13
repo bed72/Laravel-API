@@ -6,25 +6,25 @@ use App\Core\Domain\Enums\HttpStatusCode;
 
 enum DomainError: string
 {
-    case EmailAlreadyRegistered = 'email_already_registered';
-    case InvalidCredentials = 'invalid_credentials';
     case ResetTokenInvalid = 'reset_token_invalid';
+    case InvalidCredentials = 'invalid_credentials';
+    case EmailAlreadyRegistered = 'email_already_registered';
 
     public function status(): HttpStatusCode
     {
         return match ($this) {
-            self::EmailAlreadyRegistered => HttpStatusCode::UnprocessableEntity,
-            self::InvalidCredentials => HttpStatusCode::Unauthorized,
             self::ResetTokenInvalid => HttpStatusCode::BadRequest,
+            self::InvalidCredentials => HttpStatusCode::Unauthorized,
+            self::EmailAlreadyRegistered => HttpStatusCode::UnprocessableEntity,
         };
     }
 
     public function message(): string
     {
         return match ($this) {
-            self::EmailAlreadyRegistered => 'Este e-mail já está registrado.',
             self::InvalidCredentials => 'Credenciais inválidas.',
             self::ResetTokenInvalid => 'Token de redefinição inválido.',
+            self::EmailAlreadyRegistered => 'Este e-mail já está registrado.',
         };
     }
 
@@ -32,7 +32,7 @@ enum DomainError: string
     {
         return match ($this) {
             self::EmailAlreadyRegistered => 'email',
-            default => null,
+            self::InvalidCredentials, self::ResetTokenInvalid => null,
         };
     }
 

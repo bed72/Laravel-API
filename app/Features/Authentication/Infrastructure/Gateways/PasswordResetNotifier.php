@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Features\Authentication\Infrastructure\Notifications;
+namespace App\Features\Authentication\Infrastructure\Gateways;
 
-use App\Features\Authentication\Domain\Contracts\PasswordResetNotifierInterface;
+use App\Features\Authentication\Domain\Gateways\PasswordResetNotifierInterface;
 use App\Features\Authentication\Infrastructure\Jobs\SendResetPasswordJob;
 use App\Features\Users\Domain\Models\User;
 

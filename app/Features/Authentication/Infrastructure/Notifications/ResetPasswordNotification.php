@@ -3,14 +3,11 @@
 namespace App\Features\Authentication\Infrastructure\Notifications;
 
 use App\Features\Users\Domain\Models\User;
-use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
 class ResetPasswordNotification extends Notification
 {
-    use Queueable;
-
     public function __construct(
         private readonly string $token,
     ) {}
@@ -25,7 +22,7 @@ class ResetPasswordNotification extends Notification
     {
         /** @var User $notifiable */
         $uid = $notifiable->id;
-        $resetUrl = config('app.frontend_url').'/account/password/reset/'.$uid.'/'.$this->token;
+        $resetUrl = rtrim((string) config('app.frontend_url'), '/').'/account/password/reset/'.$uid.'/'.$this->token;
 
         return (new MailMessage)
             ->subject('Redefinição de Senha')
