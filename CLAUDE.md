@@ -153,9 +153,16 @@ These distinctions were made deliberately — don't re-blur them:
 - **Budget overlap** is enforced in the DB (Postgres `EXCLUDE USING gist` range-exclusion) — this is
   why Postgres is required in dev even though tests use SQLite.
 - **Expense↔budget is dynamic by date** — no stored FK; the "active budget" is whatever covers today.
-- Auth: **current impl is Sanctum PAT** (30-day tokens, rotated after 7 days via the `RotateToken`
-  middleware → `X-New-Token` header). Real JWT (access ~15 min, refresh ~30 days, rotation +
-  blacklist) is a **future feature**, not yet built — Sanctum default doesn't do it.
+- Auth: **Sanctum opaque PAT is the chosen model — not a stopgap.** 30-day tokens, rotated after 7
+  days via the `RotateToken` middleware → `X-New-Token` header. Tokens are server-side and revoked
+  by deletion (no blacklist). **JWT is explicitly NOT a target** (the spec's access-15min/refresh-30d
+  + blacklist model is overridden); don't build toward it. Accepted trade-off: a 30-day bearer token
+  has a longer exposure window than a 15-min access token — rotation mitigates; shorten the TTL if
+  needed. Keep the `TokenIssuerInterface` port regardless — its remaining justification is
+  testability + keeping `Application` free of `Laravel\Sanctum\*`, not provider-swap.
+- **No admin/2FA surface.** The spec's TOTP/sudo-mode admin (§16) was a Django-admin concern; this is
+  a JSON API with no server-rendered admin, so it is **not a target**. Destructive ops live as
+  user-facing use-cases (`DELETE /me`) or shell/CLI commands, not behind a 2FA gate.
 - Queue: Valkey can't join the Postgres transaction — use **after-commit dispatch + idempotent jobs**.
 - Categorization (`keyword | ollama | none`) and chat backends are **pluggable strategies behind contracts**.
 
