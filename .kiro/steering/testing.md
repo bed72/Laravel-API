@@ -72,8 +72,8 @@ it('rejects invalid <field>', function (array $payload, string $field) {
 ```php
 <?php
 
-use App\Features\<Feature>\Domain\Contracts\<Feature>RepositoryInterface;
-use App\Features\<Feature>\Domain\Services\<Feature>Service;
+use App\Features\<Feature>\Domain\Repositories\<Feature>RepositoryInterface;
+use App\Features\<Feature>\Application\Services\<Feature>Service;
 
 uses(Tests\TestCase::class);
 

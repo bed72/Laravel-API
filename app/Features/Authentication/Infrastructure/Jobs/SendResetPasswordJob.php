@@ -2,9 +2,9 @@
 
 namespace App\Features\Authentication\Infrastructure\Jobs;
 
+use App\Features\Authentication\Domain\Gateways\PasswordResetBrokerInterface;
 use App\Features\Authentication\Infrastructure\Notifications\ResetPasswordNotification;
 use App\Features\Users\Domain\Models\User;
-use Illuminate\Auth\Passwords\PasswordBroker;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -23,11 +23,11 @@ class SendResetPasswordJob implements ShouldBeUnique, ShouldQueue
     }
 
     /**
-     * Lock de unicidade expira em 5 minutos (tempo razoável para envio).
+     * Uniqueness lock expires after 5 minutes (a reasonable send window).
      */
     public int $uniqueFor = 300;
 
-    public function handle(PasswordBroker $broker): void
+    public function handle(PasswordResetBrokerInterface $broker): void
     {
         $token = $broker->createToken($this->user);
 

@@ -1,14 +1,14 @@
 <?php
 
 use App\Core\Domain\Exceptions\DomainException;
-use App\Features\Authentication\Domain\Contracts\AuthenticationRepositoryInterface;
-use App\Features\Authentication\Domain\Contracts\PasswordResetBrokerInterface;
-use App\Features\Authentication\Domain\Contracts\PasswordResetNotifierInterface;
-use App\Features\Authentication\Domain\Services\AuthenticationService;
+use App\Features\Authentication\Domain\Repositories\UserRepositoryInterface;
+use App\Features\Authentication\Domain\Gateways\PasswordResetBrokerInterface;
+use App\Features\Authentication\Domain\Gateways\PasswordResetNotifierInterface;
+use App\Features\Authentication\Domain\Gateways\TokenIssuerInterface;
+use App\Features\Authentication\Application\Services\AuthenticationService;
+use App\Features\Authentication\Application\Data\IssuedTokenData;
 use App\Features\Users\Domain\Models\User;
 use Illuminate\Support\Facades\Hash;
-use Laravel\Sanctum\NewAccessToken;
-use Laravel\Sanctum\PersonalAccessToken;
 use Tests\TestCase;
 
 uses(TestCase::class);
@@ -16,15 +16,22 @@ uses(TestCase::class);
 afterEach(fn () => Mockery::close());
 
 function makeService(
-    ?AuthenticationRepositoryInterface $repository = null,
+    ?UserRepositoryInterface $repository = null,
     ?PasswordResetNotifierInterface $notifier = null,
     ?PasswordResetBrokerInterface $broker = null,
+    ?TokenIssuerInterface $tokenIssuer = null,
 ): AuthenticationService {
     return new AuthenticationService(
         notifier: $notifier ?? Mockery::mock(PasswordResetNotifierInterface::class),
-        repository: $repository ?? Mockery::mock(AuthenticationRepositoryInterface::class),
+        repository: $repository ?? Mockery::mock(UserRepositoryInterface::class),
         broker: $broker ?? Mockery::mock(PasswordResetBrokerInterface::class),
+        tokenIssuer: $tokenIssuer ?? Mockery::mock(TokenIssuerInterface::class),
     );
+}
+
+function fakeIssuedToken(string $plainText = 'plain-text-token'): IssuedTokenData
+{
+    return new IssuedTokenData(id: 1, createdAt: now(), plainTextToken: $plainText);
 }
 
 // ─── signUp ───────────────────────────────────────────────────────────────────
@@ -35,31 +42,34 @@ it('signs up a new user and returns user with access token', function () {
     $user->name = 'John';
     $user->email = 'john@example.com';
 
-    $accessToken = Mockery::mock(NewAccessToken::class);
+    $token = fakeIssuedToken();
 
-    $repository = Mockery::mock(AuthenticationRepositoryInterface::class);
-    $repository->shouldReceive('findActiveUserByEmail')
+    $repository = Mockery::mock(UserRepositoryInterface::class);
+    $repository->shouldReceive('findUserByEmail')
         ->once()
         ->with('john@example.com')
         ->andReturnNull();
     $repository->shouldReceive('createUser')
         ->once()
-        ->with(['name' => 'John', 'email' => 'john@example.com', 'password' => 'secret123'])
+        ->with('John', 'john@example.com', 'secret123')
         ->andReturn($user);
-    $repository->shouldReceive('createToken')
+
+    $tokenIssuer = Mockery::mock(TokenIssuerInterface::class);
+    $tokenIssuer->shouldReceive('issue')
         ->once()
-        ->with($user)
-        ->andReturn($accessToken);
+        ->with($user, 30)
+        ->andReturn($token);
 
-    $result = makeService(repository: $repository)->signUp('John', 'john@example.com', 'secret123');
+    $result = makeService(repository: $repository, tokenIssuer: $tokenIssuer)
+        ->signUp('John', 'john@example.com', 'secret123');
 
-    expect($result['user'])->toBe($user);
-    expect($result['token'])->toBe($accessToken);
+    expect($result->user)->toBe($user);
+    expect($result->token)->toBe($token);
 });
 
 it('throws EmailAlreadyRegistered when email exists as active user', function () {
-    $repository = Mockery::mock(AuthenticationRepositoryInterface::class);
-    $repository->shouldReceive('findActiveUserByEmail')
+    $repository = Mockery::mock(UserRepositoryInterface::class);
+    $repository->shouldReceive('findUserByEmail')
         ->once()
         ->with('existing@example.com')
         ->andReturn(new User);
@@ -69,35 +79,39 @@ it('throws EmailAlreadyRegistered when email exists as active user', function ()
 
 // ─── signIn ───────────────────────────────────────────────────────────────────
 
-it('signs in with valid credentials and returns access token', function () {
+it('signs in with valid credentials and returns user with access token', function () {
     $user = new User;
     $user->setRawAttributes(['password' => 'hashed-password']);
 
-    $accessToken = Mockery::mock(NewAccessToken::class);
+    $token = fakeIssuedToken();
 
-    $repository = Mockery::mock(AuthenticationRepositoryInterface::class);
-    $repository->shouldReceive('findActiveUserByEmail')
+    $repository = Mockery::mock(UserRepositoryInterface::class);
+    $repository->shouldReceive('findUserByEmail')
         ->once()
         ->with('user@example.com')
         ->andReturn($user);
-    $repository->shouldReceive('createToken')
+
+    $tokenIssuer = Mockery::mock(TokenIssuerInterface::class);
+    $tokenIssuer->shouldReceive('issue')
         ->once()
-        ->with($user)
-        ->andReturn($accessToken);
+        ->with($user, 30)
+        ->andReturn($token);
 
     Hash::shouldReceive('check')
         ->once()
         ->with('correct-password', 'hashed-password')
         ->andReturnTrue();
 
-    $result = makeService(repository: $repository)->signIn('user@example.com', 'correct-password');
+    $result = makeService(repository: $repository, tokenIssuer: $tokenIssuer)
+        ->signIn('user@example.com', 'correct-password');
 
-    expect($result)->toBe($accessToken);
+    expect($result->user)->toBe($user);
+    expect($result->token)->toBe($token);
 });
 
 it('throws InvalidCredentials when user does not exist', function () {
-    $repository = Mockery::mock(AuthenticationRepositoryInterface::class);
-    $repository->shouldReceive('findActiveUserByEmail')
+    $repository = Mockery::mock(UserRepositoryInterface::class);
+    $repository->shouldReceive('findUserByEmail')
         ->once()
         ->with('nonexistent@example.com')
         ->andReturnNull();
@@ -109,8 +123,8 @@ it('throws InvalidCredentials when password is wrong', function () {
     $user = new User;
     $user->setRawAttributes(['password' => 'hashed-password']);
 
-    $repository = Mockery::mock(AuthenticationRepositoryInterface::class);
-    $repository->shouldReceive('findActiveUserByEmail')
+    $repository = Mockery::mock(UserRepositoryInterface::class);
+    $repository->shouldReceive('findUserByEmail')
         ->once()
         ->andReturn($user);
 
@@ -124,28 +138,57 @@ it('throws InvalidCredentials when password is wrong', function () {
 
 // ─── signOut ──────────────────────────────────────────────────────────────────
 
-it('deletes the current token on sign out', function () {
-    $token = Mockery::mock(PersonalAccessToken::class);
+it('revokes the current token on sign out', function () {
+    $token = fakeIssuedToken();
 
-    $repository = Mockery::mock(AuthenticationRepositoryInterface::class);
-    $repository->shouldReceive('deleteToken')
+    $tokenIssuer = Mockery::mock(TokenIssuerInterface::class);
+    $tokenIssuer->shouldReceive('revoke')
         ->once()
         ->with($token);
 
-    makeService(repository: $repository)->signOut($token);
+    makeService(tokenIssuer: $tokenIssuer)->signOut($token);
 });
 
 // ─── logOut ───────────────────────────────────────────────────────────────────
 
-it('deletes all tokens on log out', function () {
+it('revokes all tokens on log out', function () {
     $user = new User;
 
-    $repository = Mockery::mock(AuthenticationRepositoryInterface::class);
-    $repository->shouldReceive('deleteAllTokens')
+    $tokenIssuer = Mockery::mock(TokenIssuerInterface::class);
+    $tokenIssuer->shouldReceive('revokeAll')
         ->once()
         ->with($user);
 
-    makeService(repository: $repository)->logOut($user);
+    makeService(tokenIssuer: $tokenIssuer)->logOut($user);
+});
+
+// ─── rotateTokenIfStale ─────────────────────────────────────────────────────────
+
+it('does not rotate a fresh token', function () {
+    $fresh = new IssuedTokenData(id: 1, createdAt: now()->subDays(2));
+
+    $tokenIssuer = Mockery::mock(TokenIssuerInterface::class);
+    $tokenIssuer->shouldNotReceive('rotate');
+
+    $result = makeService(tokenIssuer: $tokenIssuer)->rotateTokenIfStale($fresh, new User);
+
+    expect($result)->toBeNull();
+});
+
+it('rotates a stale token', function () {
+    $user = new User;
+    $stale = new IssuedTokenData(id: 1, createdAt: now()->subDays(10));
+    $rotated = fakeIssuedToken('rotated-token');
+
+    $tokenIssuer = Mockery::mock(TokenIssuerInterface::class);
+    $tokenIssuer->shouldReceive('rotate')
+        ->once()
+        ->with($stale, $user, 30)
+        ->andReturn($rotated);
+
+    $result = makeService(tokenIssuer: $tokenIssuer)->rotateTokenIfStale($stale, $user);
+
+    expect($result)->toBe($rotated);
 });
 
 // ─── requestPasswordReset ─────────────────────────────────────────────────────
@@ -153,8 +196,8 @@ it('deletes all tokens on log out', function () {
 it('notifies the user when email exists', function () {
     $user = new User;
 
-    $repository = Mockery::mock(AuthenticationRepositoryInterface::class);
-    $repository->shouldReceive('findActiveUserByEmail')
+    $repository = Mockery::mock(UserRepositoryInterface::class);
+    $repository->shouldReceive('findUserByEmail')
         ->once()
         ->with('user@example.com')
         ->andReturn($user);
@@ -168,8 +211,8 @@ it('notifies the user when email exists', function () {
 });
 
 it('does not notify when email does not exist', function () {
-    $repository = Mockery::mock(AuthenticationRepositoryInterface::class);
-    $repository->shouldReceive('findActiveUserByEmail')
+    $repository = Mockery::mock(UserRepositoryInterface::class);
+    $repository->shouldReceive('findUserByEmail')
         ->once()
         ->with('ghost@example.com')
         ->andReturnNull();
@@ -183,7 +226,7 @@ it('does not notify when email does not exist', function () {
 // ─── resetPassword ────────────────────────────────────────────────────────────
 
 it('throws ResetTokenInvalid when user id does not exist', function () {
-    $repository = Mockery::mock(AuthenticationRepositoryInterface::class);
+    $repository = Mockery::mock(UserRepositoryInterface::class);
     $repository->shouldReceive('findUserById')
         ->once()
         ->with('999')
@@ -197,7 +240,7 @@ it('resets password successfully when broker returns true', function () {
     $user->id = 1;
     $user->email = 'user@example.com';
 
-    $repository = Mockery::mock(AuthenticationRepositoryInterface::class);
+    $repository = Mockery::mock(UserRepositoryInterface::class);
     $repository->shouldReceive('findUserById')
         ->once()
         ->with('1')
@@ -217,7 +260,7 @@ it('throws ResetTokenInvalid when broker returns false', function () {
     $user->id = 1;
     $user->email = 'user@example.com';
 
-    $repository = Mockery::mock(AuthenticationRepositoryInterface::class);
+    $repository = Mockery::mock(UserRepositoryInterface::class);
     $repository->shouldReceive('findUserById')
         ->once()
         ->with('1')

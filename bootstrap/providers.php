@@ -1,8 +1,8 @@
 <?php
 
-use App\Core\Providers\HorizonServiceProvider;
-use App\Features\Authentication\Infrastructure\Providers\AuthenticationServiceProvider;
-use App\Features\Expenses\Infrastructure\Providers\ExpenseServiceProvider;
+use App\Core\Main\Providers\HorizonServiceProvider;
+use App\Features\Authentication\Main\Providers\AuthenticationServiceProvider;
+use App\Features\Expenses\Main\Providers\ExpenseServiceProvider;
 
 return [
     AuthenticationServiceProvider::class,

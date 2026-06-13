@@ -98,14 +98,14 @@ return Application::configure(basePath: dirname(__DIR__))
                 );
             }
 
-            // AuthenticationException → 401
+            // AuthenticationException → 401 (token ausente/expirado — não é "credencial errada")
             if ($e instanceof AuthenticationException) {
                 return new JsonResponse(
                     ['errors' => [
                         [
                             'field' => null,
-                            'message' => 'Credenciais inválidas.',
-                            'code' => 'invalid_credentials',
+                            'message' => 'Não autenticado.',
+                            'code' => 'not_authenticated',
                         ],
                     ]],
                     HttpStatusCode::Unauthorized->value,
