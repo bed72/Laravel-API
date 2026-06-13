@@ -21,11 +21,14 @@ class UserRepository implements UserRepositoryInterface
         return $this->model->newQuery()->find($id);
     }
 
-    /** @param array<string, mixed> $data */
-    public function createUser(array $data): User
+    public function createUser(string $name, string $email, string $password): User
     {
         /** @var User */
-        return $this->model->newQuery()->create($data);
+        return $this->model->newQuery()->create([
+            'name' => $name,
+            'email' => $email,
+            'password' => $password,
+        ]);
     }
 
     public function updatePassword(User $user, string $newPassword): void

@@ -11,14 +11,8 @@ class ExpenseService
         private readonly ExpenseRepositoryInterface $repository,
     ) {}
 
-    /** @param array<string, mixed> $data */
-    public function create(
-        int $userId,
-        array $data,
-    ): Expense {
-        return $this->repository->create([
-            ...$data,
-            'user_id' => $userId,
-        ]);
+    public function create(int $userId, float $amount, ?string $description): Expense
+    {
+        return $this->repository->create($userId, $amount, $description);
     }
 }

@@ -51,7 +51,7 @@ it('signs up a new user and returns user with access token', function () {
         ->andReturnNull();
     $repository->shouldReceive('createUser')
         ->once()
-        ->with(['name' => 'John', 'email' => 'john@example.com', 'password' => 'secret123'])
+        ->with('John', 'john@example.com', 'secret123')
         ->andReturn($user);
 
     $tokenIssuer = Mockery::mock(TokenIssuerInterface::class);

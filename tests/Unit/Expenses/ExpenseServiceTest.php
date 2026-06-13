@@ -12,17 +12,10 @@ it('merges the user id and delegates to the repository', function () {
     $repository = Mockery::mock(ExpenseRepositoryInterface::class);
     $repository->shouldReceive('create')
         ->once()
-        ->with([
-            'amount' => 10.50,
-            'description' => 'Almoco',
-            'user_id' => 7,
-        ])
+        ->with(7, 10.50, 'Almoco')
         ->andReturn($persisted);
 
-    $result = (new ExpenseService($repository))->create(7, [
-        'amount' => 10.50,
-        'description' => 'Almoco',
-    ]);
+    $result = (new ExpenseService($repository))->create(7, 10.50, 'Almoco');
 
     expect($result)->toBe($persisted);
 });

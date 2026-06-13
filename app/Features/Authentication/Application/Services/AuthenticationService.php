@@ -38,11 +38,7 @@ class AuthenticationService
             DomainError::EmailAlreadyRegistered->throw();
         }
 
-        $user = $this->repository->createUser([
-            'name' => $name,
-            'email' => $email,
-            'password' => $password,
-        ]);
+        $user = $this->repository->createUser($name, $email, $password);
 
         $token = $this->tokenIssuer->issue($user, self::TOKEN_TTL_DAYS);
 

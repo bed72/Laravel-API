@@ -8,8 +8,7 @@ interface ExpenseRepositoryInterface
 {
     public function findById(int $id): ?Expense;
 
-    /** @param array<string, mixed> $data */
-    public function create(array $data): Expense;
+    public function create(int $userId, float $amount, ?string $description): Expense;
 
     public function delete(Expense $expense): void;
 }

@@ -17,7 +17,8 @@ class ExpenseController
     ): ExpenseResponse {
         $expense = $this->service->create(
             1,
-            $request->validated(),
+            (float) $request->validated('amount'),
+            $request->validated('description'),
         );
 
         return ExpenseResponse::make($expense);
