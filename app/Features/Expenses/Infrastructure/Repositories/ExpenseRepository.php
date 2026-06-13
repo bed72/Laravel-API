@@ -2,6 +2,7 @@
 
 namespace App\Features\Expenses\Infrastructure\Repositories;
 
+use App\Features\Expenses\Application\Data\CreateExpenseData;
 use App\Features\Expenses\Domain\Repositories\ExpenseRepositoryInterface;
 use App\Features\Expenses\Domain\Models\Expense;
 
@@ -16,13 +17,13 @@ class ExpenseRepository implements ExpenseRepositoryInterface
         return $this->model->newQuery()->find($id);
     }
 
-    public function create(int $userId, float $amount, ?string $description): Expense
+    public function create(CreateExpenseData $data): Expense
     {
         /** @var Expense */
         return $this->model->newQuery()->create([
-            'user_id' => $userId,
-            'amount' => $amount,
-            'description' => $description,
+            'user_id' => $data->userId,
+            'amount' => $data->amount,
+            'description' => $data->description,
         ]);
     }
 

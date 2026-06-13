@@ -2,15 +2,16 @@
 
 namespace App\Features\Authentication\Domain\Repositories;
 
+use App\Features\Authentication\Application\Data\CreateUserData;
 use App\Features\Users\Domain\Models\User;
 
 interface UserRepositoryInterface
 {
-    public function createUser(string $name, string $email, string $password): User;
+    public function create(CreateUserData $data): User;
 
-    public function findUserById(int|string $id): ?User;
+    public function findById(int|string $id): ?User;
 
-    public function findUserByEmail(string $email): ?User;
+    public function findByEmail(string $email): ?User;
 
     public function updatePassword(User $user, string $newPassword): void;
 }

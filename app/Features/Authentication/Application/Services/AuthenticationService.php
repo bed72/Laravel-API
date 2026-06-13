@@ -8,7 +8,9 @@ use App\Features\Authentication\Domain\Gateways\PasswordResetBrokerInterface;
 use App\Features\Authentication\Domain\Gateways\PasswordResetNotifierInterface;
 use App\Features\Authentication\Domain\Gateways\TokenIssuerInterface;
 use App\Features\Authentication\Application\Data\AuthenticationSessionData;
+use App\Features\Authentication\Application\Data\CreateUserData;
 use App\Features\Authentication\Application\Data\IssuedTokenData;
+use App\Features\Authentication\Application\Data\ResetPasswordData;
 use App\Features\Users\Domain\Models\User;
 use Illuminate\Support\Facades\Hash;
 
@@ -30,15 +32,15 @@ class AuthenticationService
     /**
      * Sign up a new user, issue a token, and return user + access token.
      */
-    public function signUp(string $name, string $email, string $password): AuthenticationSessionData
+    public function signUp(CreateUserData $data): AuthenticationSessionData
     {
-        $existing = $this->repository->findUserByEmail($email);
+        $existing = $this->repository->findByEmail($data->email);
 
         if ($existing !== null) {
             DomainError::EmailAlreadyRegistered->throw();
         }
 
-        $user = $this->repository->createUser($name, $email, $password);
+        $user = $this->repository->create($data);
 
         $token = $this->tokenIssuer->issue($user, self::TOKEN_TTL_DAYS);
 
@@ -50,7 +52,7 @@ class AuthenticationService
      */
     public function signIn(string $email, string $password): AuthenticationSessionData
     {
-        $user = $this->repository->findUserByEmail($email);
+        $user = $this->repository->findByEmail($email);
 
         if ($user === null) {
             DomainError::InvalidCredentials->throw();
@@ -101,7 +103,7 @@ class AuthenticationService
      */
     public function requestPasswordReset(string $email): void
     {
-        $user = $this->repository->findUserByEmail($email);
+        $user = $this->repository->findByEmail($email);
 
         if ($user === null) {
             return;
@@ -113,15 +115,15 @@ class AuthenticationService
     /**
      * Reset a user's password using a valid reset token.
      */
-    public function resetPassword(string $uid, string $token, string $newPassword): void
+    public function resetPassword(ResetPasswordData $data): void
     {
-        $user = $this->repository->findUserById($uid);
+        $user = $this->repository->findById($data->uid);
 
         if ($user === null) {
             DomainError::ResetTokenInvalid->throw();
         }
 
-        $success = $this->broker->reset($user, $token, $newPassword);
+        $success = $this->broker->reset($user, $data->token, $data->newPassword);
 
         if (! $success) {
             DomainError::ResetTokenInvalid->throw();

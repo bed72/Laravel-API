@@ -4,7 +4,9 @@ namespace App\Features\Authentication\Presentation\Controllers;
 
 use App\Core\Domain\Enums\HttpStatusCode;
 use App\Features\Authentication\Application\Services\AuthenticationService;
+use App\Features\Authentication\Application\Data\CreateUserData;
 use App\Features\Authentication\Application\Data\IssuedTokenData;
+use App\Features\Authentication\Application\Data\ResetPasswordData;
 use App\Features\Authentication\Presentation\Requests\PasswordResetConfirmRequest;
 use App\Features\Authentication\Presentation\Requests\PasswordResetRequest;
 use App\Features\Authentication\Presentation\Requests\SignInRequest;
@@ -23,11 +25,11 @@ class AuthenticationController
 
     public function signUp(SignUpRequest $request): SignUpResponse
     {
-        $session = $this->service->signUp(
+        $session = $this->service->signUp(new CreateUserData(
             name: $request->validated('name'),
             email: $request->validated('email'),
             password: $request->validated('password'),
-        );
+        ));
 
         return SignUpResponse::make($session->user, (string) $session->token->plainTextToken);
     }
@@ -68,11 +70,11 @@ class AuthenticationController
 
     public function resetPassword(PasswordResetConfirmRequest $request): JsonResponse
     {
-        $this->service->resetPassword(
+        $this->service->resetPassword(new ResetPasswordData(
             uid: $request->validated('uid'),
             token: $request->validated('token'),
             newPassword: $request->validated('new_password'),
-        );
+        ));
 
         return response()->json(null, HttpStatusCode::NoContent->value);
     }

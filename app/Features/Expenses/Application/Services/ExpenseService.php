@@ -2,6 +2,7 @@
 
 namespace App\Features\Expenses\Application\Services;
 
+use App\Features\Expenses\Application\Data\CreateExpenseData;
 use App\Features\Expenses\Domain\Repositories\ExpenseRepositoryInterface;
 use App\Features\Expenses\Domain\Models\Expense;
 
@@ -11,8 +12,8 @@ class ExpenseService
         private readonly ExpenseRepositoryInterface $repository,
     ) {}
 
-    public function create(int $userId, float $amount, ?string $description): Expense
+    public function create(CreateExpenseData $data): Expense
     {
-        return $this->repository->create($userId, $amount, $description);
+        return $this->repository->create($data);
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Features\Authentication\Infrastructure\Repositories;
 
+use App\Features\Authentication\Application\Data\CreateUserData;
 use App\Features\Authentication\Domain\Repositories\UserRepositoryInterface;
 use App\Features\Users\Domain\Models\User;
 
@@ -11,23 +12,23 @@ class UserRepository implements UserRepositoryInterface
         private readonly User $model,
     ) {}
 
-    public function findUserByEmail(string $email): ?User
+    public function findByEmail(string $email): ?User
     {
         return $this->model->newQuery()->where('email', $email)->first();
     }
 
-    public function findUserById(int|string $id): ?User
+    public function findById(int|string $id): ?User
     {
         return $this->model->newQuery()->find($id);
     }
 
-    public function createUser(string $name, string $email, string $password): User
+    public function create(CreateUserData $data): User
     {
         /** @var User */
         return $this->model->newQuery()->create([
-            'name' => $name,
-            'email' => $email,
-            'password' => $password,
+            'name' => $data->name,
+            'email' => $data->email,
+            'password' => $data->password,
         ]);
     }
 

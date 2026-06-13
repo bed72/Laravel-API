@@ -118,6 +118,13 @@ These distinctions were made deliberately — don't re-blur them:
   (`Service`, `Repository`, `Job`, `Notification`, `Request`, `Response`, `Data` for DTOs); pure
   domain concepts do **not** (`User`, `Expense`, future VOs like `Money`). A DTO is a transport
   stereotype, so it follows the suffix family → `AuthenticationSessionData`, `IssuedTokenData`.
+- **Input DTO over loose params (>2 rule).** A method that takes **more than 2 parameters of plain
+  data** (a data clump describing one thing) MUST bundle them into an input DTO in `Application/Data/`
+  (`Data` suffix — e.g. `CreateUserData`, `ResetPasswordData`, `CreateExpenseData`) instead of
+  positional scalars; this kills same-typed argument mix-ups. The count **excludes** constructor DI
+  params and parameters that are entities / distinct domain objects (e.g. `reset(User $user, string
+  $token, string $newPassword)` is 2 data params → stays; `rotate(IssuedTokenData, User, int)` is
+  distinct objects, not a clump → stays). ≤2 data params: positional with named args is fine.
 - **Domain stays free of token infrastructure.** The token lifecycle sits behind
   `TokenIssuerInterface` (Sanctum only in the gateway impl); `AuthenticationService` never imports
   `Laravel\Sanctum\*`. An arch test enforces this. **Boundary rule:** abstract *stateful* resources

@@ -36,6 +36,8 @@ Além disso:
 - `tests/Feature/<Feature>/Create<Feature>Test.php`
 - `tests/Unit/<Feature>/<Feature>ServiceTest.php`
 
+> **Regra dos +2 parâmetros:** método com mais de 2 params de dados empacota num DTO de entrada em `Application/Data/` (sufixo `Data`). Não conta construtor (DI) nem params que são entidades. Ver `architecture.md`.
+
 ## Padrão do Model
 
 ```php

@@ -56,6 +56,12 @@ app/Features/<Feature>/
   - Teste de bolso: *"eu faria `->find()`/`->paginate()` e receberia uma entidade minha?"* Sim → repository; outcome/credencial → gateway.
 - **Não** criar pastas por estereótipo de pattern (`Issuer/`, `Broker/`): o sufixo da classe já carrega o pattern; pasta se paga com volume + coesão.
 
+### DTO de entrada — regra dos +2 parâmetros
+
+Método com **mais de 2 parâmetros de dados** (data clump que descreve uma coisa só) **deve** empacotá-los num DTO de entrada em `Application/Data/` (sufixo `Data`: `CreateUserData`, `ResetPasswordData`, `CreateExpenseData`) em vez de scalars posicionais — elimina troca de argumentos do mesmo tipo. O Controller monta o DTO a partir do `validated()` e passa ao Service; Service repassa ao Repository.
+
+**Não conta** pra esse limite: parâmetros de construtor (DI não é clump) nem parâmetros que são **entidades/objetos de domínio distintos**. Ex.: `reset(User $user, string $token, string $newPassword)` tem 2 params de dados → fica; `rotate(IssuedTokenData, User, int)` são objetos distintos, não clump → fica. Com ≤2 params de dados, posicional + named args resolve.
+
 ## Wiring de Features
 
 Cada feature tem um provider (registrado em `bootstrap/providers.php`) que:
