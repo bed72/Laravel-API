@@ -2,7 +2,7 @@
 
 use App\Features\Users\Domain\Models\User;
 
-it('signs in with valid credentials and returns token', function () {
+it('signs in with valid credentials and returns token and user', function () {
     User::factory()->create([
         'email' => 'user@example.com',
         'password' => 'password123',
@@ -14,9 +14,27 @@ it('signs in with valid credentials and returns token', function () {
     ]);
 
     $response->assertOk()
-        ->assertJsonStructure(['token']);
+        ->assertJsonStructure([
+            'token',
+            'user' => ['id', 'name', 'email'],
+        ])
+        ->assertJsonPath('user.email', 'user@example.com');
 
     expect($response->json('token'))->toBeString()->not->toBeEmpty();
+});
+
+it('does not return the password in sign in response', function () {
+    User::factory()->create([
+        'email' => 'secure@example.com',
+        'password' => 'password123',
+    ]);
+
+    $response = $this->postJson('/api/auth/sign-in', [
+        'email' => 'secure@example.com',
+        'password' => 'password123',
+    ]);
+
+    expect($response->json('user'))->not->toHaveKey('password');
 });
 
 it('rejects sign in with wrong password', function () {

@@ -1,8 +1,8 @@
 <?php
 
-use App\Features\Expenses\Domain\Contracts\ExpenseRepositoryInterface;
+use App\Features\Expenses\Domain\Repositories\ExpenseRepositoryInterface;
 use App\Features\Expenses\Domain\Models\Expense;
-use App\Features\Expenses\Domain\Services\ExpenseService;
+use App\Features\Expenses\Application\Services\ExpenseService;
 
 afterEach(fn () => Mockery::close());
 

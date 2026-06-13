@@ -11,7 +11,7 @@ it('logs out from all devices by deleting all tokens', function () {
     $user->createToken('api');
 
     $response = $this->withHeader('Authorization', 'Bearer '.$token1->plainTextToken)
-        ->postJson('/api/auth/logout');
+        ->postJson('/api/auth/sign-out-all');
 
     $response->assertNoContent();
 
@@ -19,6 +19,6 @@ it('logs out from all devices by deleting all tokens', function () {
 });
 
 it('rejects logout without authentication', function () {
-    $this->postJson('/api/auth/logout')
+    $this->postJson('/api/auth/sign-out-all')
         ->assertUnauthorized();
 });
